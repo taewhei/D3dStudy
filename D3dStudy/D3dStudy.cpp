@@ -10,9 +10,14 @@ LPDIRECT3D9   g_pD3D = NULL;   // D3D 디바이스를 생성할 D3D 객체 변수
 LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;
 LPDIRECT3DINDEXBUFFER9 g_pIB = NULL;
 
+D3DXMATRIX matTrans;
+D3DXMATRIX matRotX;
 
 char szWinName[] = "DX9_Tutorial_02";  // 윈도우 클래스 이름
 char szWinTitle[] = "DX9 Tutorial VertexBuffer";
+
+float fxAngle = 0.0f;
+
 
 struct SPACESHIPVERTEX
 {
@@ -28,6 +33,7 @@ struct SPACESHIPINDEX
 struct SPACESHIPOBJECT
 {
 	D3DXMATRIX matLocal;
+	D3DXMATRIX matRotX;
 };
 
 SPACESHIPVERTEX g_pVertices[16];
@@ -119,14 +125,12 @@ HRESULT InitVB()
 	memcpy(pVertices, g_pVertices, sizeof(g_pVertices));
 	g_pVB->Unlock();
 
-	
 	return S_OK;
 }
 
 HRESULT InitIB()
 {
 	
-
 	g_pIndices[0]._0 = 0;	g_pIndices[0]._1 = 1;	g_pIndices[0]._2 = 2;
 	g_pIndices[1]._0 = 0;	g_pIndices[1]._1 = 2;	g_pIndices[1]._2 = 3;
 	g_pIndices[2]._0 = 0;	g_pIndices[2]._1 = 3;	g_pIndices[2]._2 = 4;
@@ -159,7 +163,12 @@ HRESULT InitGeometry()
 	g_pObjects[0].matLocal._42 = 1.0f;
 	g_pObjects[0].matLocal._43 = -1.0f;
 
-	return S_OK;
+	D3DXMatrixIdentity(&g_pObjects[0].matRotX);
+	g_pObjects[0].matRotX._41 = 0.0f;
+	g_pObjects[0].matRotX._42 = 0.0f;
+	g_pObjects[0].matRotX._43 = 0.0f;
+	
+		return S_OK;;
 }
 VOID SetupRenderStates()
 {
@@ -182,7 +191,6 @@ VOID SetupMatrics()
 
 	D3DXMatrixPerspectiveFovLH(&matProj, D3DX_PI / 4, 1.0f, 1.0f, 100.0f);
 	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &matProj);
-
 
 }
 VOID SetupInputs()
@@ -209,32 +217,38 @@ VOID SetupInputs()
 	{
 		PostQuitMessage(0);
 	}
+	if (GetAsyncKeyState(0x52))
+	{
+		D3DXMatrixRotationY(&(g_pObjects[0].matRotX), fxAngle += 0.05f);
+	}
+	
 }
 
 VOID Render()
-{
-	if (NULL == g_pd3dDevice)
-		return;
+{	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(0.0f, 0.25f, 0.25f, 0.55f), 1.0f, 0);
+
 
 	SetupRenderStates();
 	SetupMatrics();
 	SetupInputs();
 
-	D3DXMATRIX matTrans;
+
 	D3DXMatrixTranslation(&matTrans, 2.0f, 0.0f, 0.0f);
 
-	g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, D3DXCOLOR(0.0f, 0.25f, 0.25f, 0.55f), 1.0f, 0);
 
 
+	if (NULL == g_pd3dDevice)
+		return;
+	
 	if (SUCCEEDED(g_pd3dDevice->BeginScene()))
 	{
 
 		D3DXMATRIXA16 matWorld;
 		D3DXMatrixIdentity(&matWorld);
-		g_pd3dDevice->SetTransform(D3DTS_WORLD, &g_pObjects[0].matLocal);
 	
+		g_pd3dDevice->SetTransform(D3DTS_WORLD, &(matTrans*matRotX));
 
-		g_pd3dDevice->SetTransform(D3DTS_WORLD, &(matTrans));
+		g_pd3dDevice->SetTransform(D3DTS_WORLD, &(g_pObjects[0].matLocal*g_pObjects[0].matRotX));
 
 		g_pd3dDevice->SetStreamSource(0, g_pVB, 0, sizeof(SPACESHIPVERTEX));
 		g_pd3dDevice->SetFVF(D3DFMT_SPACESHIPVERTEX);
